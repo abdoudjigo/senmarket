@@ -1,0 +1,22 @@
+# Environnements Python et caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets et variables d'environnement
+.env
+.env.*
+!.env.example
+
+# Données générées et journaux (régénérables avec le pipeline)
+data/
+logs/
+*.log
+
+# Notebooks, éditeurs, systèmes
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
