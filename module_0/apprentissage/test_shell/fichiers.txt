@@ -1,0 +1,11 @@
+01_numpy.ipynb
+02_pandas.ipynb
+03_visualisation.ipynb
+04_linux_shell.ipynb
+05_formats_donnees.ipynb
+06_faker_pytest.ipynb
+chiffre_affaires_par_produit.png
+commandes.csv
+commandes.json
+test_shell
+Première vérification

@@ -1,0 +1,37 @@
+[
+  {
+    "commande_id":101,
+    "ville":"Dakar",
+    "produit":"Riz",
+    "quantite":2,
+    "montant":5000
+  },
+  {
+    "commande_id":102,
+    "ville":"Thiès",
+    "produit":"Huile",
+    "quantite":1,
+    "montant":2500
+  },
+  {
+    "commande_id":103,
+    "ville":"Dakar",
+    "produit":"Sucre",
+    "quantite":5,
+    "montant":1500
+  },
+  {
+    "commande_id":104,
+    "ville":"Saint-Louis",
+    "produit":"Riz",
+    "quantite":3,
+    "montant":7500
+  },
+  {
+    "commande_id":105,
+    "ville":"Thiès",
+    "produit":"Huile",
+    "quantite":2,
+    "montant":5000
+  }
+]
