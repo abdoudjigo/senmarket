@@ -245,7 +245,7 @@ des fichiers différents.
   été testés de bout en bout.
 - Le pipeline tourne sur une seule machine, sur des fichiers (pas de base de données).
 - Pas de cohortes de clients ni de rétention dans l'analyse pour l'instant.
-- Pas de `pyproject.toml` : le package n'est pas installable (`pip install -e .`).
+- Le code importe encore `src.senmarket` (qui ne marche que depuis la racine du projet). `pip install -e .` permet aussi `import senmarket` ; les deux écritures coexistent, à unifier plus tard.
 - Testé uniquement avec Python 3.14.4 : à revalider (3.12 recommandé) avant Airflow,
   dbt et PySpark.
 

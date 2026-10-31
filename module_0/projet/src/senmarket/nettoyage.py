@@ -99,6 +99,9 @@ PRIX_MAX_XOF = 1_000_000
 COLONNE_MOTIF_REJET = "raison_rejet"
 VALEUR_INCONNUE = "Inconnue"
 
+# Boolean columns: the CSV stores them as the text True/False.
+COLONNES_BOOLEENNES = {"produits": ("actif",)}
+
 
 # ---------------------------------------------------------------------------
 # Reading and validating inputs
@@ -205,6 +208,27 @@ def _normaliser_localisation(resultat: pd.DataFrame) -> None:
     for colonne in ("ville", "region"):
         valeurs = resultat[colonne].astype("string").str.strip()
         resultat[colonne] = valeurs.mask(valeurs.isna() | valeurs.eq(""), VALEUR_INCONNUE)
+
+
+def _typer_booleens(nom_table: str, acceptes: pd.DataFrame) -> None:
+    """Turn the text "True"/"False" read from the CSV into real booleans (in place).
+
+    An unreadable value raises a clear error instead of being converted
+    silently: astype(bool) would turn an empty cell into True.
+    """
+    for colonne in COLONNES_BOOLEENNES.get(nom_table, ()):
+        if colonne not in acceptes.columns or acceptes[colonne].dtype == bool:
+            continue
+        textes = acceptes[colonne].astype("string").str.strip().str.lower()
+        convertis = textes.map({"true": True, "false": False})
+        illisibles = convertis.isna()
+        if illisibles.any():
+            exemples = sorted(set(acceptes.loc[illisibles, colonne].astype(str)))[:3]
+            raise ValueError(
+                f"Table {nom_table}, colonne {colonne} : valeurs booléennes "
+                f"illisibles {exemples} (attendu : True ou False)."
+            )
+        acceptes[colonne] = convertis.astype(bool)
 
 
 def _typer_mesures_entieres(nom_table: str, acceptes: pd.DataFrame) -> None:
@@ -322,6 +346,7 @@ def nettoyer_table(
     acceptes = resultat.loc[~masque_rejet, colonnes_sortie].copy()
 
     _typer_mesures_entieres(nom_table, acceptes)
+    _typer_booleens(nom_table, acceptes)
 
     # Dates are exported as ISO strings, in both accepted and rejected files.
     for colonne in COLONNES_DATE.get(nom_table, ()):

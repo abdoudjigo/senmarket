@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/senmarket/__init__.py
+src/senmarket/analyse.py
+src/senmarket/chemins.py
+src/senmarket/export.py
+src/senmarket/generateur.py
+src/senmarket/nettoyage.py
+src/senmarket/visualisation.py
+src/senmarket.egg-info/PKG-INFO
+src/senmarket.egg-info/SOURCES.txt
+src/senmarket.egg-info/dependency_links.txt
+src/senmarket.egg-info/top_level.txt
+tests/test_generateur.py
+tests/test_nettoyage.py
+tests/test_qualite_donnees.py

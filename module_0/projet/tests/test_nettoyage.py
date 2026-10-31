@@ -183,3 +183,33 @@ def test_client_sans_nom_est_rejete():
     assert len(acceptes) == 0
     assert len(rejetes) == 1
     assert "champ_obligatoire_absent:nom_client" in rejetes["raison_rejet"].iloc[0]
+
+
+def creer_produits() -> pd.DataFrame:
+    """Créer des produits valides, avec `actif` lu comme du texte (comme depuis le CSV)."""
+    return pd.DataFrame({
+        "produit_id": ["PR001", "PR002"],
+        "nom_produit": ["Riz brisé", "Savon"],
+        "categorie": ["Alimentation", "Hygiène"],
+        "vendeur_id": ["VEN001", "VEN001"],
+        "prix_catalogue_xof": [12500, 700],
+        "actif": ["True", "False"],
+    })
+
+
+def test_actif_devient_un_vrai_booleen():
+    """Le texte True/False du CSV devient un booléen dans les lignes acceptées."""
+    acceptes, rejetes = nettoyer_table("produits", creer_produits(), DATE_EXECUTION, CLES_VALIDES)
+
+    assert len(rejetes) == 0
+    assert acceptes["actif"].dtype == bool
+    assert acceptes["actif"].tolist() == [True, False]
+
+
+def test_actif_illisible_leve_une_erreur_claire():
+    """Une valeur autre que True/False n'est pas convertie en silence."""
+    df = creer_produits()
+    df.loc[0, "actif"] = "peut-être"
+
+    with pytest.raises(ValueError, match="actif"):
+        nettoyer_table("produits", df, DATE_EXECUTION, CLES_VALIDES)
