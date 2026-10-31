@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
+import unicodedata
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -71,23 +73,49 @@ POIDS_VILLES = np.array([
 ], dtype=float)
 POIDS_VILLES /= POIDS_VILLES.sum()
 
-NOMS_PRODUITS = [
-    "Riz brisé", "Huile végétale", "Sucre", "Lait en poudre",
-    "Thé", "Café", "Farine", "Pâtes alimentaires",
-    "Savon", "Lessive", "Eau minérale", "Jus de fruits",
-    "Concentré de tomate", "Oignon", "Pomme de terre",
-    "Arachide", "Mil", "Maïs", "Fonio", "Poisson séché",
-    "Poulet", "Viande", "Œufs", "Pain",
-    "Téléphone", "Écouteurs", "Chargeur", "Clavier",
-    "Souris", "Casque audio", "T-shirt", "Chaussures",
-    "Sac", "Cahier", "Stylo", "Cartable",
-    "Drap", "Serviette", "Lampe", "Ventilateur",
-]
+# Catalogue de référence : chaque produit appartient à sa catégorie dès la
+# source, avec un prix de catalogue fixe en XOF (entier). Il est donc
+# impossible d'obtenir « Sucre » dans « Vêtements ».
+# L'ordre compte : les premiers produits sont les plus populaires.
+CATALOGUE = {
+    "Alimentation": [
+        ("Riz brisé", 12_500), ("Huile végétale", 6_000), ("Sucre", 1_000),
+        ("Lait en poudre", 3_500), ("Farine", 800), ("Pâtes alimentaires", 600),
+        ("Concentré de tomate", 500), ("Oignon", 700), ("Pomme de terre", 600),
+        ("Arachide", 1_500), ("Mil", 900), ("Maïs", 800), ("Fonio", 1_800),
+        ("Poisson séché", 2_500), ("Poulet", 4_500), ("Viande", 5_500),
+        ("Œufs", 2_200), ("Pain", 500),
+    ],
+    "Boissons": [
+        ("Thé", 1_200), ("Café", 2_000), ("Eau minérale", 500),
+        ("Jus de fruits", 1_000),
+    ],
+    "Hygiène": [
+        ("Savon", 700), ("Lessive", 2_500),
+    ],
+    "Électronique": [
+        ("Téléphone", 85_000), ("Écouteurs", 8_000), ("Chargeur", 5_000),
+        ("Clavier", 12_000), ("Souris", 6_000), ("Casque audio", 15_000),
+    ],
+    "Vêtements": [
+        ("T-shirt", 5_000), ("Chaussures", 25_000), ("Sac", 15_000),
+    ],
+    "Fournitures": [
+        ("Cahier", 500), ("Stylo", 500), ("Cartable", 12_000),
+    ],
+    "Maison": [
+        ("Drap", 10_000), ("Serviette", 4_000), ("Lampe", 7_000),
+        ("Ventilateur", 28_000),
+    ],
+}
 
-CATEGORIES_PRODUITS = [
-    "Alimentation", "Hygiène", "Boissons", "Électronique",
-    "Vêtements", "Maison", "Fournitures",
-]
+CATEGORIES_PRODUITS = list(CATALOGUE)
+
+# Coordonnées synthétiques des clients (téléphones au format sénégalais).
+DOMAINES_EMAIL = ["gmail.com", "yahoo.fr", "hotmail.com", "orange.sn"]
+POIDS_DOMAINES = np.array([0.55, 0.15, 0.10, 0.20])
+PREFIXES_TELEPHONE = ["70", "75", "76", "77", "78"]
+POIDS_PREFIXES = np.array([0.05, 0.10, 0.15, 0.40, 0.30])
 
 METHODES_PAIEMENT = [
     "Wave", "Orange Money", "Carte bancaire", "Espèces"
@@ -138,17 +166,46 @@ def generer_dates(
     return np.array(dates, dtype=object)
 
 
+def _texte_pour_email(nom: str) -> str:
+    """Rendre un nom utilisable dans une adresse e-mail (sans accents ni espaces)."""
+    sans_accents = (
+        unicodedata.normalize("NFKD", nom).encode("ascii", "ignore").decode("ascii")
+    )
+    return re.sub(r"[^a-z0-9]+", ".", sans_accents.lower()).strip(".")
+
+
 def generer_clients(
     nombre: int,
     rng: np.random.Generator,
     run_date: date,
 ) -> pd.DataFrame:
-    """Générer les clients avec un identifiant métier stable."""
+    """
+    Générer les clients avec un identifiant métier stable.
+
+    L'e-mail est construit à partir du nom et du numéro du client, ce qui
+    garantit son unicité. Le téléphone suit le format +221 7x xxx xx xx.
+    """
     villes = rng.choice(VILLES, size=nombre, p=POIDS_VILLES)
+    noms = [FAKE.name() for _ in range(nombre)]
+
+    domaines = rng.choice(DOMAINES_EMAIL, size=nombre, p=POIDS_DOMAINES)
+    emails = [
+        f"{_texte_pour_email(nom)}{numero}@{domaine}"
+        for numero, (nom, domaine) in enumerate(zip(noms, domaines), start=1)
+    ]
+
+    prefixes = rng.choice(PREFIXES_TELEPHONE, size=nombre, p=POIDS_PREFIXES)
+    blocs = rng.integers(0, [1000, 100, 100], size=(nombre, 3))
+    telephones = [
+        f"+221 {prefixe} {a:03d} {b:02d} {c:02d}"
+        for prefixe, (a, b, c) in zip(prefixes, blocs)
+    ]
 
     return pd.DataFrame({
         "client_id": [f"CLI{i:07d}" for i in range(1, nombre + 1)],
-        "nom_client": [FAKE.name() for _ in range(nombre)],
+        "nom_client": noms,
+        "email": emails,
+        "telephone": telephones,
         "ville": villes,
         "region": [VILLES_REGIONS[ville] for ville in villes],
         "date_inscription": generer_dates(
@@ -177,32 +234,34 @@ def generer_produits(
     rng: np.random.Generator,
 ) -> pd.DataFrame:
     """
-    Générer un catalogue de 40 produits.
+    Générer le catalogue à partir du référentiel CATALOGUE.
 
-    Le prix catalogue est une référence. Le prix effectivement payé sera
-    stocké séparément dans les lignes de commande.
+    Le nom, la catégorie et le prix catalogue viennent du même endroit :
+    ils sont cohérents par construction. Seul le vendeur est tiré au hasard.
+    Le prix effectivement payé sera stocké séparément dans les lignes de
+    commande.
     """
-    nombre = len(NOMS_PRODUITS)
+    articles = [
+        (categorie, nom, prix)
+        for categorie, produits in CATALOGUE.items()
+        for nom, prix in produits
+    ]
+    nombre = len(articles)
 
-    # Certains produits sont plus populaires que d'autres.
+    # Certains produits sont plus populaires que d'autres (ordre du catalogue).
     poids = np.exp(-np.linspace(0, 2.0, nombre))
     poids /= poids.sum()
 
-    categories = rng.choice(
-        CATEGORIES_PRODUITS,
-        size=nombre,
-    )
-
     return pd.DataFrame({
         "produit_id": [f"PRO{i:04d}" for i in range(1, nombre + 1)],
-        "nom_produit": NOMS_PRODUITS,
-        "categorie": categories,
+        "nom_produit": [nom for _, nom, _ in articles],
+        "categorie": [categorie for categorie, _, _ in articles],
         "vendeur_id": [
             f"VEN{i:05d}"
             for i in rng.integers(1, nombre_vendeurs + 1, size=nombre)
         ],
-        "prix_catalogue_xof": rng.integers(
-            500, 100_001, size=nombre
+        "prix_catalogue_xof": np.array(
+            [prix for _, _, prix in articles], dtype="int64"
         ),
         "actif": True,
         "poids_simulation": poids,

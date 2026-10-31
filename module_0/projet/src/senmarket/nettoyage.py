@@ -51,7 +51,7 @@ CLES_PRIMAIRES = {
 }
 
 COLONNES_REQUISES = {
-    "clients": ("client_id", "nom_client", "ville", "region", "date_inscription"),
+    "clients": ("client_id", "nom_client", "email", "telephone", "ville", "region", "date_inscription"),
     "vendeurs": ("vendeur_id", "nom_vendeur", "ville", "region"),
     "produits": ("produit_id", "nom_produit", "categorie", "vendeur_id", "prix_catalogue_xof", "actif"),
     "commandes": ("commande_id", "client_id", "date_commande", "statut"),
