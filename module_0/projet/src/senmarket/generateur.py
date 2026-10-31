@@ -123,6 +123,10 @@ METHODES_PAIEMENT = [
 
 STATUTS_PAIEMENT = ["réussi", "en_attente", "échoué"]
 
+# Écarts métier voulus (ce ne sont pas des défauts à mettre en quarantaine).
+TAUX_COMMANDES_SANS_PAIEMENT = 0.02
+TAUX_PAIEMENTS_AVEC_ECART = 0.01
+
 TYPES_NAVIGATION = [
     "page_vue", "recherche", "vue_produit",
     "ajout_panier", "debut_paiement",
@@ -268,6 +272,25 @@ def generer_produits(
     })
 
 
+def _dates_apres(
+    debuts: np.ndarray,
+    run_date: date,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Tirer, pour chaque élément, une date comprise entre `debuts` et run_date.
+
+    Sert à ne jamais dater un événement avant celui dont il dépend
+    (une commande après l'inscription, un avis après la commande).
+    Les dates sont renvoyées au format ISO YYYY-MM-DD.
+    """
+    fin = np.datetime64(run_date, "D")
+    ecarts = np.maximum((fin - debuts).astype("int64"), 0)
+    decalages = (rng.random(len(debuts)) * (ecarts + 1)).astype("int64")
+    dates = debuts + decalages.astype("timedelta64[D]")
+    return np.datetime_as_string(dates, unit="D").astype(object)
+
+
 def generer_donnees(
     rows: int = 10_000,
     run_date: date | None = None,
@@ -318,17 +341,24 @@ def generer_donnees(
     poids_produits = produits["poids_simulation"].to_numpy()
     prix_catalogue = produits.set_index("produit_id")["prix_catalogue_xof"]
 
-    # Chaque commande possède un client et une date.
+    # Chaque commande possède un client et une date. La date est tirée entre
+    # l'inscription du client et run_date : on ne commande pas avant de
+    # s'être inscrit.
+    nombre_commandes = len(numeros_commandes_uniques)
+    clients_commandes = rng.choice(client_ids, size=nombre_commandes)
+    inscriptions = (
+        pd.to_datetime(clients.set_index("client_id")["date_inscription"].loc[clients_commandes])
+        .to_numpy()
+        .astype("datetime64[D]")
+    )
+    dates_commandes = _dates_apres(inscriptions, run_date, rng)
+
     commandes = pd.DataFrame({
         "commande_id": [
             f"CMD{numero:08d}" for numero in numeros_commandes_uniques
         ],
-        "client_id": rng.choice(
-            client_ids, size=len(numeros_commandes_uniques)
-        ),
-        "date_commande": generer_dates(
-            len(numeros_commandes_uniques), run_date, rng
-        ),
+        "client_id": clients_commandes,
+        "date_commande": dates_commandes,
         "statut": rng.choice(
             ["livrée", "expédiée", "en_preparation", "annulée"],
             size=len(numeros_commandes_uniques),
@@ -374,11 +404,7 @@ def generer_donnees(
     totaux_commandes = (
         lignes_commande.groupby("commande_id")["montant_xof"].sum()
     )
-    paiements = pd.DataFrame({
-        "paiement_id": [
-            f"PAI{i:08d}"
-            for i in range(1, len(commandes) + 1)
-        ],
+    paiements_complets = pd.DataFrame({
         "commande_id": commandes["commande_id"].to_numpy(),
         "methode_paiement": rng.choice(
             METHODES_PAIEMENT,
@@ -398,11 +424,48 @@ def generer_donnees(
         "date_paiement": commandes["date_commande"].to_numpy(),
     })
 
-    # Générer des avis pour une partie des lignes de commande.
-    nombre_avis = max(1, int(rows * 0.10))
-    indices_avis = rng.integers(0, rows, size=nombre_avis)
-    lignes_avis = lignes_commande.iloc[indices_avis].reset_index(drop=True)
+    # Écart métier n°1 : environ 2 % des commandes n'ont aucun paiement.
+    a_un_paiement = (
+        rng.random(len(paiements_complets)) >= TAUX_COMMANDES_SANS_PAIEMENT
+    )
+    paiements = paiements_complets.loc[a_un_paiement].reset_index(drop=True)
+
+    # Écart métier n°2 : environ 1 % des paiements ont un montant différent
+    # de la somme des lignes (frais ou remise de 2 % à 10 %).
+    avec_ecart = rng.random(len(paiements)) < TAUX_PAIEMENTS_AVEC_ECART
+    facteurs = np.where(
+        rng.random(len(paiements)) < 0.5,
+        rng.uniform(0.90, 0.98, size=len(paiements)),
+        rng.uniform(1.02, 1.10, size=len(paiements)),
+    )
+    montants_avec_ecart = np.rint(
+        paiements["montant_xof"].to_numpy() * facteurs
+    ).astype("int64")
+    paiements["montant_xof"] = np.where(
+        avec_ecart, montants_avec_ecart, paiements["montant_xof"].to_numpy()
+    )
+    paiements.insert(
+        0,
+        "paiement_id",
+        [f"PAI{i:08d}" for i in range(1, len(paiements) + 1)],
+    )
+
+    # Avis uniquement sur des commandes livrées, datés après la commande.
+    livrees = set(commandes.loc[commandes["statut"] == "livrée", "commande_id"])
+    lignes_livrees = lignes_commande[lignes_commande["commande_id"].isin(livrees)]
     commande_client = commandes.set_index("commande_id")["client_id"]
+    commande_date = commandes.set_index("commande_id")["date_commande"]
+
+    nombre_avis = min(max(1, int(rows * 0.10)), len(lignes_livrees))
+    indices_avis = rng.integers(
+        0, max(len(lignes_livrees), 1), size=nombre_avis
+    )
+    lignes_avis = lignes_livrees.iloc[indices_avis].reset_index(drop=True)
+    debuts_avis = (
+        pd.to_datetime(lignes_avis["commande_id"].map(commande_date))
+        .to_numpy()
+        .astype("datetime64[D]")
+    )
 
     avis = pd.DataFrame({
         "avis_id": [
@@ -412,7 +475,7 @@ def generer_donnees(
         "produit_id": lignes_avis["produit_id"].to_numpy(),
         "commande_id": lignes_avis["commande_id"].to_numpy(),
         "note": rng.integers(1, 6, size=nombre_avis),
-        "date_avis": generer_dates(nombre_avis, run_date, rng),
+        "date_avis": _dates_apres(debuts_avis, run_date, rng),
     }).drop_duplicates(subset=["avis_id"])
 
     # Les événements de navigation comprennent des visiteurs anonymes.

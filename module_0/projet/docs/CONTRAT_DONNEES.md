@@ -61,7 +61,7 @@ Types : texte, entier, date (`AAAA-MM-JJ` dans les CSV, vraie date dans le Parqu
 |---|---|---|
 | commande_id | texte, PK | `CMD` + 8 chiffres (`CMD00000001`) |
 | client_id | texte, FK → clients | |
-| date_commande | date | sur les 365 derniers jours ; jamais postérieure à `--run-date` (sinon rejet) |
+| date_commande | date | entre la date d'inscription du client et `--run-date` ; postérieure à `--run-date` : rejet |
 | statut | texte | `livrée`, `expédiée`, `en_preparation`, `annulée` |
 
 ### lignes_commande (une ligne = un produit dans un ticket)
@@ -78,19 +78,19 @@ Types : texte, entier, date (`AAAA-MM-JJ` dans les CSV, vraie date dans le Parqu
 | Colonne | Type | Règle |
 |---|---|---|
 | paiement_id | texte, PK | `PAI` + 8 chiffres |
-| commande_id | texte, FK → commandes | une commande a un paiement |
+| commande_id | texte, FK → commandes | au plus un paiement par commande (environ 2 % des commandes n'en ont aucun) |
 | methode_paiement | texte | `Wave`, `Orange Money`, `Carte bancaire`, `Espèces` |
 | statut_paiement | texte | `réussi`, `en_attente`, `échoué` |
-| montant_xof | entier | = somme des lignes de la commande ; rejeté si négatif |
+| montant_xof | entier | égal à la somme des lignes de la commande, sauf environ 1 % des paiements (frais ou remise de 2 % à 10 %) ; rejeté si négatif |
 | date_paiement | date | = date de la commande |
 
 ### avis (une ligne = un avis client)
 | Colonne | Type | Règle |
 |---|---|---|
 | avis_id | texte, PK | `AVI` + 8 chiffres |
-| client_id, produit_id, commande_id | texte, FK | le client est celui de la commande ; le produit fait partie de la commande |
+| client_id, produit_id, commande_id | texte, FK | le client est celui de la commande ; le produit fait partie de la commande ; la commande est `livrée` |
 | note | entier | de 1 à 5 ; rejeté sinon |
-| date_avis | date | |
+| date_avis | date | entre la date de la commande et `--run-date` |
 
 ### navigation (une ligne = un événement de navigation)
 | Colonne | Type | Règle |
@@ -154,11 +154,16 @@ Une commande `annulée` est comptée dans le CA commandé : ce n'est pas de l'ar
 - Argent en XOF, entier (pas de centimes en franc CFA).
 - Colonnes volontairement absentes : `stock`, `commentaire`, `reference_transaction` (créées au Module 1).
 
-## 9. Ce que les données ne contiennent pas (encore)
+## 9. Écarts voulus et limites connues
 
-Le contrat décrit ce qui est garanti. Ces points sont absents des données actuelles, il faut les savoir avant d'interpréter une analyse :
+Écarts métier voulus (ce ne sont pas des défauts, ils ne vont pas en quarantaine) :
 
-- **Un paiement par commande, toujours égal au total des lignes.** Il n'y a ni commande sans paiement, ni paiement dont le montant diffère. Les commandes « sans paiement réussi » existent, mais ce sont des paiements `échoué` ou `en_attente`.
-- **Aucun paiement orphelin** (pas de défaut qui pointe vers une commande inexistante).
-- **Dates non liées entre elles** : `date_commande` n'est pas forcée d'être postérieure à `date_inscription`, ni `date_avis` à `date_commande`.
-- **Quantités et notes tirées uniformément** (1 à 5), sans loi de popularité.
+- Environ 2 % des commandes n'ont aucun paiement.
+- Environ 1 % des paiements ont un montant différent de la somme des lignes (frais ou remise). Ces écarts servent au Module 1 : rapprochement des paiements et du chiffre d'affaires.
+
+Limites connues :
+
+- Aucun paiement orphelin (pas de défaut qui pointe vers une commande inexistante).
+- Un seul paiement par commande, même quand il est échoué (pas de nouvelle tentative).
+- Quantités et notes tirées uniformément de 1 à 5, sans loi de popularité.
+- Noms générés avec le locale `fr_FR`, pas avec des noms sénégalais.

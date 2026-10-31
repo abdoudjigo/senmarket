@@ -69,3 +69,56 @@ def test_telephones_au_format_senegalais(tables):
 def test_erreur_rows_invalide():
     with pytest.raises(ValueError, match="supérieur à zéro"):
         gen.generer_donnees(rows=0)
+
+
+@pytest.fixture(scope="module")
+def tables_volume():
+    """Jeu plus gros, pour vérifier des taux à quelques points près."""
+    return gen.generer_donnees(rows=20_000, run_date=date(2026, 10, 29))
+
+
+def test_environ_2_pour_cent_des_commandes_sans_paiement(tables_volume):
+    commandes = tables_volume["commandes"]
+    payees = set(tables_volume["paiements"]["commande_id"])
+    part = (~commandes["commande_id"].isin(payees)).mean()
+    assert 0.01 <= part <= 0.03
+
+
+def test_au_plus_un_paiement_par_commande(tables_volume):
+    assert tables_volume["paiements"]["commande_id"].is_unique
+
+
+def test_environ_1_pour_cent_des_paiements_avec_ecart(tables_volume):
+    totaux = tables_volume["lignes_commande"].groupby("commande_id")["montant_xof"].sum()
+    paiements = tables_volume["paiements"]
+    ecart = paiements["montant_xof"] != paiements["commande_id"].map(totaux)
+    assert 0.003 <= ecart.mean() <= 0.02
+
+
+def test_commande_jamais_avant_l_inscription(tables_volume):
+    commandes = tables_volume["commandes"].merge(
+        tables_volume["clients"][["client_id", "date_inscription"]], on="client_id"
+    )
+    assert len(commandes) == len(tables_volume["commandes"])
+    assert (commandes["date_commande"] >= commandes["date_inscription"]).all()
+    assert (commandes["date_commande"] <= "2026-10-29").all()
+
+
+def test_avis_sur_commande_livree_apres_la_commande(tables_volume):
+    avis = tables_volume["avis"].merge(
+        tables_volume["commandes"][["commande_id", "statut", "date_commande"]],
+        on="commande_id",
+    )
+    assert len(avis) == len(tables_volume["avis"])
+    assert (avis["statut"] == "livrée").all()
+    assert (avis["date_avis"] >= avis["date_commande"]).all()
+    assert (avis["date_avis"] <= "2026-10-29").all()
+
+
+def test_avis_porte_sur_un_produit_de_la_commande(tables_volume):
+    lignes = tables_volume["lignes_commande"]
+    paires = set(zip(lignes["commande_id"], lignes["produit_id"]))
+    avis = tables_volume["avis"]
+    assert all(
+        (c, p) in paires for c, p in zip(avis["commande_id"], avis["produit_id"])
+    )

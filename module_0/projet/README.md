@@ -200,13 +200,13 @@ Partition `2026-10-29`, 10 000 lignes de commande, six défauts injectés (comma
 | produits        | 40            | 40        | 0        |
 | commandes       | 4 056         | 4 055     | 1        |
 | lignes_commande | 10 001        | 9 997     | 4        |
-| paiements       | 4 056         | 4 055     | 1        |
-| avis            | 1 000         | 1 000     | 0        |
+| paiements       | 3 981         | 3 980     | 1        |
+| avis            | 1 000         | 999       | 1        |
 | navigation      | 20 000        | 20 000    | 0        |
 
-Indicateurs : chiffre d'affaires total 148 909 187 XOF, panier moyen 36 722,36 XOF, 30 080 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 14,91 %. Contrôle : 37 tests de qualité réussis.
+Il y a moins de paiements que de commandes (3 981 pour 4 056) : environ 2 % des commandes n'ont volontairement aucun paiement. Ce n'est pas un défaut.
 
-Les montants sont environ huit fois plus faibles que dans une version précédente du projet : les prix viennent maintenant d'un catalogue de référence (riz à 12 500 XOF, téléphone à 85 000 XOF) au lieu d'être tirés au hasard entre 500 et 100 000 XOF.
+Indicateurs : chiffre d'affaires total 153 901 922 XOF, panier moyen 37 953,62 XOF, 30 041 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 13,71 %. Contrôle : 63 tests réussis (37 de qualité, 14 du générateur, 12 du nettoyage).
 
 ## 11. Reproductibilité
 
