@@ -167,3 +167,49 @@ Limites connues :
 - Un seul paiement par commande, même quand il est échoué (pas de nouvelle tentative).
 - Quantités et notes tirées uniformément de 1 à 5, sans loi de popularité.
 - Noms générés avec le locale `fr_FR`, pas avec des noms sénégalais.
+
+## 10. Organisation des données : les partitions
+
+Une **partition** est un dossier qui représente un lot de données, nommé `date=AAAA-MM-JJ`. Chaque exécution du pipeline avec `--run-date AAAA-MM-JJ` écrit dans les dossiers de cette date et n'écrase jamais les autres.
+
+```
+data/
+├── raw/date=AAAA-MM-JJ/         brut (sale) : 8 CSV, bilan_generation.csv, senmarket.log
+├── processed/date=AAAA-MM-JJ/   propre : CSV, Parquet (types propres), JSON Lines, analyses/
+└── rejected/date=AAAA-MM-JJ/    quarantaine : lignes rejetées avec leur raison, bilans
+```
+
+Deux axes se croisent : l'**étape** (brut, propre, rejeté) et le **lot** (la date). Pour savoir ce qu'est devenue une ligne, on compare les trois dossiers de la même date.
+
+### Pourquoi partitionner
+
+- **Ne rien écraser** : traiter aujourd'hui ne fait pas disparaître hier.
+- **Rejouer un seul lot** : on relance une date sans toucher aux autres (au Module 5, un backfill de 30 jours répète la même opération sur 30 dates).
+- **Lire seulement ce qu'il faut** : avec des millions de lignes, Spark ou DuckDB n'ouvrent que les dossiers utiles au lieu d'un fichier unique énorme. Le nom `clé=valeur` est un standard qu'ils reconnaissent, et la date devient une colonne.
+- **Comprendre une anomalie** : brut, propre et rejeté partagent la même date.
+
+### Nos deux partitions
+
+| Partition | Taille | Rôle |
+|---|---|---|
+| `date=2026-10-29` | 10 000 lignes de commande | travail quotidien, tests, analyses |
+| `date=2026-11-02` | 200 000 lignes de commande | « volume » : mesures de performance (index, temps de lecture) au Module 1 |
+
+Sur 10 000 lignes, une base répond en quelques millisecondes avec ou sans index : seules les mesures sur la grosse partition prouvent quelque chose.
+
+### Ce que veut dire la date d'un dossier
+
+Dans ce TP, la date du dossier est la date d'exécution (`--run-date`), pas celle des commandes : chaque lancement génère environ deux ans d'historique qui se terminent à cette date. Dans un vrai projet, la partition du 30 ne contiendrait que ce qui est arrivé le 30. Les périodes de nos deux partitions se chevauchent donc : ce sont **deux jeux de test indépendants**, pas deux jours de la même boutique.
+
+### Reproductibilité
+
+La graine aléatoire dérive de la date : `[SENMARKET_SEED, AAAAMMJJ]` (par exemple `[42, 20261029]`).
+
+- Même date et mêmes paramètres : mêmes fichiers (empreintes `sha256` identiques).
+- Dates différentes : jeux indépendants (clients, noms et montants différents).
+
+### Règle à retenir
+
+Les identifiants se répètent d'une partition à l'autre : `CLI0000001` existe dans les deux, pour deux personnes différentes. **Ne jamais charger deux partitions dans les mêmes tables** (au Module 1, la partition volume va dans son propre schéma PostgreSQL).
+
+Créer une partition : `python scripts/run_pipeline.py --run-date AAAA-MM-JJ --generer --rows 10000`.

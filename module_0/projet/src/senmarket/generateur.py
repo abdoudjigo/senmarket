@@ -32,6 +32,14 @@ from faker import Faker
 RACINE_PROJET = Path(__file__).resolve().parents[2]
 LOGGER = logging.getLogger(__name__)
 
+# Lire le fichier .env s'il existe (sans erreur si python-dotenv est absent).
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 # Graine de base (configurable par l'environnement). La graine réelle d'une
 # exécution en dérive avec la date : voir graine_du_jour().
 GRAINE_BASE = int(os.environ.get("SENMARKET_SEED", "42"))

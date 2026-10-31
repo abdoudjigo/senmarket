@@ -253,3 +253,15 @@ des fichiers différents.
 
 Prochaines étapes du fil rouge : charger ces tables dans PostgreSQL, MongoDB et Redis
 (étape 1), puis traiter de plus gros volumes avec Spark (étape 2).
+
+## Documentation du projet (dossier `docs/`)
+
+Le README dit comment utiliser le projet. Le détail est réparti dans `docs/`, un fichier par question, pour ne jamais écrire la même chose à deux endroits :
+
+| Fichier | Il répond à la question | Il contient |
+|---|---|---|
+| [`CONTRAT_DONNEES.md`](docs/CONTRAT_DONNEES.md) | Que contient chaque table ? | schéma des relations, colonnes et types, règles métier, trois définitions du chiffre d'affaires, écarts voulus et limites connues, organisation des données en partitions |
+| [`DECISIONS.md`](docs/DECISIONS.md) | Pourquoi ce choix plutôt qu'un autre ? | une ligne par décision : ce qui est retenu, l'alternative rejetée, la raison |
+| [`MESURES.md`](docs/MESURES.md) | Quelles preuves chiffrées, sur ma machine ? | machine, volume, temps de lecture et taille de chaque format ; généré par `python scripts/mesurer_formats.py`, ne pas modifier à la main |
+
+Les données sont rangées par **partitions** (un dossier `date=AAAA-MM-JJ` par exécution, dans `data/raw`, `data/processed` et `data/rejected`) : voir la section 10 de `docs/CONTRAT_DONNEES.md`.
