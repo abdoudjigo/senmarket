@@ -195,18 +195,18 @@ Partition `2026-10-29`, 10 000 lignes de commande, six défauts injectés (comma
 
 | Table           | Lignes brutes | Acceptées | Rejetées |
 |-----------------|--------------:|----------:|---------:|
-| clients         | 3 333         | 3 333     | 0        |
-| vendeurs        | 20            | 20        | 0        |
-| produits        | 40            | 40        | 0        |
-| commandes       | 4 056         | 4 055     | 1        |
-| lignes_commande | 10 001        | 9 997     | 4        |
-| paiements       | 3 981         | 3 980     | 1        |
-| avis            | 1 000         | 999       | 1        |
-| navigation      | 20 000        | 20 000    | 0        |
+| clients         |         3 333 |     3 333 |        0 |
+| vendeurs        |            20 |        20 |        0 |
+| produits        |            40 |        40 |        0 |
+| commandes       |         4 085 |     4 084 |        1 |
+| lignes_commande |        10 001 |     9 995 |        6 |
+| paiements       |         4 003 |     4 002 |        1 |
+| avis            |         1 000 |       999 |        1 |
+| navigation      |        20 000 |    20 000 |        0 |
 
-Il y a moins de paiements que de commandes (3 981 pour 4 056) : environ 2 % des commandes n'ont volontairement aucun paiement. Ce n'est pas un défaut.
+Il y a moins de paiements que de commandes : environ 2 % des commandes n'ont volontairement aucun paiement. Ce n'est pas un défaut.
 
-Indicateurs : chiffre d'affaires total 153 901 922 XOF, panier moyen 37 953,62 XOF, 30 041 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 13,71 %. Contrôle : 63 tests réussis (37 de qualité, 14 du générateur, 12 du nettoyage).
+Indicateurs : chiffre d'affaires total 163 011 763 XOF, panier moyen 39 914,73 XOF, 30 163 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 14,64 %. Contrôle : 68 tests réussis.
 
 ## 11. Reproductibilité
 

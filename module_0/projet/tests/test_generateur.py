@@ -122,3 +122,27 @@ def test_avis_porte_sur_un_produit_de_la_commande(tables_volume):
     assert all(
         (c, p) in paires for c, p in zip(avis["commande_id"], avis["produit_id"])
     )
+
+
+from pandas.testing import assert_frame_equal
+
+
+def test_graine_du_jour():
+    assert gen.graine_du_jour(date(2026, 10, 29), graine_base=42) == [42, 20261029]
+
+
+def test_meme_date_memes_donnees():
+    """Reproductibilité : deux générations pour la même date sont identiques."""
+    a = gen.generer_donnees(rows=500, run_date=date(2026, 10, 29))
+    b = gen.generer_donnees(rows=500, run_date=date(2026, 10, 29))
+    for nom in ("clients", "commandes", "lignes_commande"):
+        assert_frame_equal(a[nom], b[nom])
+
+
+def test_dates_differentes_jeux_independants():
+    """Deux dates donnent des clients différents (ce n'était pas le cas avant)."""
+    a = gen.generer_donnees(rows=500, run_date=date(2026, 10, 29))
+    b = gen.generer_donnees(rows=500, run_date=date(2026, 11, 2))
+    noms_a = a["clients"]["nom_client"].head(50).tolist()
+    noms_b = b["clients"]["nom_client"].head(50).tolist()
+    assert noms_a != noms_b

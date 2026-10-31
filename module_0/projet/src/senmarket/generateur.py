@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import re
 import unicodedata
 from datetime import date, timedelta
@@ -31,8 +32,12 @@ from faker import Faker
 RACINE_PROJET = Path(__file__).resolve().parents[2]
 LOGGER = logging.getLogger(__name__)
 
+# Graine de base (configurable par l'environnement). La graine réelle d'une
+# exécution en dérive avec la date : voir graine_du_jour().
+GRAINE_BASE = int(os.environ.get("SENMARKET_SEED", "42"))
+
 FAKE = Faker("fr_FR")
-FAKE.seed_instance(42)  # graine fixe : noms identiques d'une exécution à l'autre
+FAKE.seed_instance(GRAINE_BASE)  # regraine par date dans generer_donnees
 
 # Les villes et régions sont un référentiel synthétique de localisation.
 # Plusieurs villes appartiennent à la région de Dakar.
@@ -272,6 +277,17 @@ def generer_produits(
     })
 
 
+def graine_du_jour(run_date: date, graine_base: int = GRAINE_BASE) -> list[int]:
+    """
+    Dériver la graine de la date d'exécution.
+
+    Même date et mêmes paramètres : mêmes données (reproductible).
+    Dates différentes : jeux de données indépendants.
+    Exemple : 2026-10-29 -> [42, 20261029].
+    """
+    return [graine_base, int(run_date.strftime("%Y%m%d"))]
+
+
 def _dates_apres(
     debuts: np.ndarray,
     run_date: date,
@@ -317,8 +333,11 @@ def generer_donnees(
     if inconnus:
         raise ValueError(f"Défauts inconnus : {sorted(inconnus)}")
 
-    # La graine fixe rend les tirages NumPy reproductibles.
-    rng = np.random.default_rng(42)
+    # La graine dérive de la date : reproductible pour une même date,
+    # indépendante d'une date à l'autre. Faker est regrainé au même moment.
+    graine = graine_du_jour(run_date)
+    rng = np.random.default_rng(graine)
+    FAKE.seed_instance(graine[0] * 100_000_000 + graine[1])
 
     # La taille des référentiels dépend du volume demandé.
     nombre_clients = min(max(rows // 3, 100), 50_000)
