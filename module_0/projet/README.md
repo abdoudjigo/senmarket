@@ -191,23 +191,22 @@ s'il n'existe aucune partition.
 
 ## 10. Résultat de référence
 
-Partition `2026-10-29`, 10 000 lignes de commande, six défauts injectés
-(commande ci-dessus). Ces chiffres sont un repère, pas des constantes.
+Partition `2026-10-29`, 10 000 lignes de commande, six défauts injectés (commande ci-dessus). Ces chiffres sont un repère, pas des constantes.
 
-| Table | Lignes brutes | Acceptées | Rejetées |
-|---|---:|---:|---:|
-| clients | 3 333 | 3 333 | 0 |
-| vendeurs | 20 | 20 | 0 |
-| produits | 40 | 40 | 0 |
-| commandes | 4 033 | 4 032 | 1 |
-| lignes_commande | 10 001 | 9 995 | 6 |
-| paiements | 4 033 | 4 032 | 1 |
-| avis | 1 000 | 1 000 | 0 |
-| navigation | 20 000 | 20 000 | 0 |
+| Table           | Lignes brutes | Acceptées | Rejetées |
+|-----------------|--------------:|----------:|---------:|
+| clients         | 3 333         | 3 333     | 0        |
+| vendeurs        | 20            | 20        | 0        |
+| produits        | 40            | 40        | 0        |
+| commandes       | 4 056         | 4 055     | 1        |
+| lignes_commande | 10 001        | 9 997     | 4        |
+| paiements       | 4 056         | 4 055     | 1        |
+| avis            | 1 000         | 1 000     | 0        |
+| navigation      | 20 000        | 20 000    | 0        |
 
-Indicateurs : chiffre d'affaires total 1 272 739 236 XOF, panier moyen 315 737,84 XOF,
-29 999 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 15,15 %.
-Contrôle : 37 tests de qualité réussis.
+Indicateurs : chiffre d'affaires total 148 909 187 XOF, panier moyen 36 722,36 XOF, 30 080 unités vendues, 20 villes, 40 produits, taux de conversion des sessions 14,91 %. Contrôle : 37 tests de qualité réussis.
+
+Les montants sont environ huit fois plus faibles que dans une version précédente du projet : les prix viennent maintenant d'un catalogue de référence (riz à 12 500 XOF, téléphone à 85 000 XOF) au lieu d'être tirés au hasard entre 500 et 100 000 XOF.
 
 ## 11. Reproductibilité
 
