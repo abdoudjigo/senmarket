@@ -131,3 +131,55 @@ def test_refuse_une_colonne_requise_absente():
         nettoyer_table(
             "lignes_commande", df, DATE_EXECUTION, CLES_VALIDES
         )
+
+
+def creer_clients() -> pd.DataFrame:
+    """Créer un client valide pour les tests."""
+    return pd.DataFrame({
+        "client_id": ["CLI0000001"],
+        "nom_client": ["Aïssatou Diop"],
+        "email": ["aissatou.diop1@gmail.com"],
+        "telephone": ["+221 77 123 45 67"],
+        "ville": ["Dakar"],
+        "region": ["Dakar"],
+        "date_inscription": ["2026-03-10"],
+    })
+
+
+@pytest.mark.parametrize("colonne", ["email", "telephone"])
+@pytest.mark.parametrize("vide", [None, ""])
+def test_client_sans_email_ou_telephone_est_accepte(colonne, vide):
+    """Email et téléphone sont facultatifs : vides, ils ne rejettent pas le client."""
+    df = creer_clients()
+    df.loc[0, colonne] = vide
+
+    acceptes, rejetes = nettoyer_table("clients", df, DATE_EXECUTION, CLES_VALIDES)
+
+    assert len(acceptes) == 1
+    assert len(rejetes) == 0
+    valeur = acceptes[colonne].iloc[0]
+    # La cellule reste vide : elle n'est pas remplacée par « Inconnue ».
+    assert pd.isna(valeur) or valeur == ""
+
+
+def test_client_sans_ville_recoit_inconnue():
+    """Une ville manquante ne supprime pas le client : elle devient « Inconnue »."""
+    df = creer_clients()
+    df.loc[0, "ville"] = None
+
+    acceptes, rejetes = nettoyer_table("clients", df, DATE_EXECUTION, CLES_VALIDES)
+
+    assert len(rejetes) == 0
+    assert acceptes["ville"].iloc[0] == "Inconnue"
+
+
+def test_client_sans_nom_est_rejete():
+    """Le nom reste obligatoire : un client sans nom est mis en quarantaine."""
+    df = creer_clients()
+    df.loc[0, "nom_client"] = None
+
+    acceptes, rejetes = nettoyer_table("clients", df, DATE_EXECUTION, CLES_VALIDES)
+
+    assert len(acceptes) == 0
+    assert len(rejetes) == 1
+    assert "champ_obligatoire_absent:nom_client" in rejetes["raison_rejet"].iloc[0]

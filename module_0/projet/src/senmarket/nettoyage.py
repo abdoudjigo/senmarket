@@ -79,7 +79,8 @@ COLONNES_NUMERIQUES = {
 # Columns that may be empty without rejecting the row.
 CHAMPS_OPTIONNELS = {
     # A missing city/region is replaced by "Inconnue" instead of dropping the client.
-    "clients": frozenset({"ville", "region"}),
+    # email et telephone sont facultatifs : vides, ils ne rejettent pas la ligne.
+    "clients": frozenset({"ville", "region", "email", "telephone"}),
     # Navigation events can be anonymous or not linked to a product.
     "navigation": frozenset({"client_id", "produit_id"}),
 }
