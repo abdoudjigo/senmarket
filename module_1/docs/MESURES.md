@@ -131,3 +131,10 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
   premier_jour/dernier_jour qui comptent, pas nb_jours (faible aussi en début de série car le volume y est très bas).
 - Variations des premiers mois très grandes (+881 % en janv. 2025) : effet d'une base minuscule, à ne pas interpréter.
 - CA mensuel multiplié par ~190 entre nov. 2024 et oct. 2026 (hypothèse non vérifiée : peu de clients inscrits au début).
+
+## Chapitre 2.3 : SM-123, panier moyen (partition principale)
+- 4 084 commandes, toutes avec au moins une ligne (le schéma n'interdit pas une commande sans ligne, les données n'en ont aucune).
+- Panier moyen par commande : 39 915 XOF ; médiane : 18 361 XOF ; moyenne par ligne : 16 309 XOF ; 2,45 lignes par commande.
+- Invariants : somme des paniers = CA total (écart 0) ; panier moyen / moyenne par ligne = lignes par commande (écart 0).
+- Pourquoi panier moyen ≠ moyenne par ligne : une commande a en moyenne 2,45 lignes ; le rapport des deux calculs est exactement ce nombre.
+- Moyenne (39 915) bien au-dessus de la médiane (18 361) : quelques gros paniers tirent la moyenne ; la médiane est plus représentative du client typique.

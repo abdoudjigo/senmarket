@@ -190,3 +190,36 @@ v AS (
 SELECT COUNT(*) FILTER (WHERE variation IS NULL)                              AS nb_null,
        COUNT(*) FILTER (WHERE variation IS NULL AND mois = (SELECT MIN(mois) FROM mensuel)) AS dont_premier_mois
 FROM v;
+
+-- ===========================================================================
+-- SM-123 : « Quel est notre panier moyen ? »
+-- Panier d'une commande = somme de ses lignes (jamais la valeur d'une seule ligne).
+-- Agrégation en DEUX temps : (1) une ligne par commande avec son panier, (2) la moyenne de ces paniers.
+-- Piège évité : joindre commandes et lignes puis faire AVG d'une valeur de commande
+-- compterait chaque commande autant de fois qu'elle a de lignes.
+-- ===========================================================================
+WITH panier AS (
+    SELECT commande_id, SUM(montant_xof) AS montant_panier, COUNT(*) AS nb_lignes
+    FROM lignes_commande
+    GROUP BY commande_id
+)
+SELECT
+    COUNT(*)                                                                      AS nb_commandes_avec_lignes,
+    (SELECT COUNT(*) FROM commandes)                                              AS nb_commandes_total,
+    ROUND(AVG(montant_panier), 0)                                                 AS panier_moyen_par_commande,
+    ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY montant_panier))::numeric, 0) AS panier_median,
+    (SELECT ROUND(AVG(montant_xof), 0) FROM lignes_commande)                      AS moyenne_par_ligne,
+    ROUND(AVG(nb_lignes), 2)                                                      AS lignes_par_commande
+FROM panier;
+
+-- Invariant 1 : la somme des paniers égale le CA total (écart 0).
+-- Invariant 2 : panier moyen / moyenne par ligne = nombre moyen de lignes par commande (écart 0).
+WITH panier AS (
+    SELECT commande_id, SUM(montant_xof) AS montant_panier, COUNT(*) AS nb_lignes
+    FROM lignes_commande GROUP BY commande_id
+)
+SELECT
+    (SELECT SUM(montant_xof) FROM lignes_commande) - SUM(montant_panier)                AS ecart_ca,
+    ROUND(AVG(montant_panier) / (SELECT AVG(montant_xof) FROM lignes_commande)
+          - AVG(nb_lignes), 6)                                                          AS ecart_ratio
+FROM panier;
