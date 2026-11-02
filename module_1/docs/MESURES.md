@@ -123,3 +123,11 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
   Boissons (Thé = Café = 220) et Fournitures (Cahier = Stylo = 107). Démonstration sur cette mesure, pas sur la définition de SM-121.
 - Boissons : row_number 1,2,3,4 ; rank 1,1,3,4 (trou) ; dense_rank 1,1,2,3.
   `rank <= 1` renvoie 2 produits, `dense_rank <= 2` en renvoie 3 : seul `row_number` + départage fixe garantit « au plus N ».
+
+## Chapitre 2.3 : SM-122, évolution mensuelle du CA (partition principale)
+- 24 mois, du 2024-11-11 au 2026-10-29. Somme des mois = CA total (écart 0). Seule la variation du 1er mois est NULL.
+- Moyenne mobile 3 mois : NULL pour les 2 premiers mois, puis vérifiée à la main (janv. 2025 : 508 058).
+- Mois incomplets : le premier (4 jours, à partir du 11 nov.) et le dernier (oct. 2026 s'arrête au 29). Pour les repérer, c'est
+  premier_jour/dernier_jour qui comptent, pas nb_jours (faible aussi en début de série car le volume y est très bas).
+- Variations des premiers mois très grandes (+881 % en janv. 2025) : effet d'une base minuscule, à ne pas interpréter.
+- CA mensuel multiplié par ~190 entre nov. 2024 et oct. 2026 (hypothèse non vérifiée : peu de clients inscrits au début).

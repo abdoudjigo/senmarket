@@ -141,3 +141,52 @@ SELECT categorie, produit_id, nom_produit, nb_commandes, row_number, rank, dense
 FROM d
 WHERE egalite_dans_categorie > 1
 ORDER BY categorie, row_number;
+
+-- ===========================================================================
+-- SM-122 : « Comment évolue le CA mois après mois, et quelle est la variation ? »
+-- CA = somme de lignes_commande.montant_xof, rattaché au mois de date_commande.
+-- LAG : valeur du mois précédent ; NULL pour le premier mois (pas 0 : 0 % voudrait
+-- dire « aucun changement », ce qui est faux). Moyenne mobile : mois courant + 2
+-- précédents ; NULL tant qu'il n'y a pas 3 mois. nb_jours / premier_jour / dernier_jour
+-- repèrent les mois incomplets aux deux extrémités.
+-- ===========================================================================
+WITH mensuel AS (
+    SELECT date_trunc('month', c.date_commande)::date AS mois,
+           SUM(l.montant_xof)                          AS ca_xof,
+           COUNT(DISTINCT c.date_commande)             AS nb_jours,
+           MIN(c.date_commande)                        AS premier_jour,
+           MAX(c.date_commande)                        AS dernier_jour
+    FROM lignes_commande l
+    JOIN commandes c ON c.commande_id = l.commande_id
+    GROUP BY 1
+)
+SELECT mois, ca_xof,
+       LAG(ca_xof) OVER (ORDER BY mois)                                        AS ca_mois_precedent,
+       ROUND(100.0 * (ca_xof - LAG(ca_xof) OVER (ORDER BY mois))
+             / NULLIF(LAG(ca_xof) OVER (ORDER BY mois), 0), 1)                 AS variation_pct,
+       CASE WHEN COUNT(*) OVER w = 3 THEN ROUND(AVG(ca_xof) OVER w, 0) END     AS moyenne_mobile_3m,
+       nb_jours, premier_jour, dernier_jour
+FROM mensuel
+WINDOW w AS (ORDER BY mois ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+ORDER BY mois;
+
+-- Invariant 1 : la somme des mois égale le CA total (l'écart doit valoir 0).
+WITH mensuel AS (
+    SELECT date_trunc('month', c.date_commande)::date AS mois, SUM(l.montant_xof) AS ca_xof
+    FROM lignes_commande l JOIN commandes c ON c.commande_id = l.commande_id
+    GROUP BY 1
+)
+SELECT (SELECT SUM(montant_xof) FROM lignes_commande) - SUM(ca_xof) AS ecart FROM mensuel;
+
+-- Invariant 2 : la variation du premier mois est NULL, et elle est la seule (doit afficher 1 | 1).
+WITH mensuel AS (
+    SELECT date_trunc('month', c.date_commande)::date AS mois, SUM(l.montant_xof) AS ca_xof
+    FROM lignes_commande l JOIN commandes c ON c.commande_id = l.commande_id
+    GROUP BY 1
+),
+v AS (
+    SELECT mois, ca_xof - LAG(ca_xof) OVER (ORDER BY mois) AS variation FROM mensuel
+)
+SELECT COUNT(*) FILTER (WHERE variation IS NULL)                              AS nb_null,
+       COUNT(*) FILTER (WHERE variation IS NULL AND mois = (SELECT MIN(mois) FROM mensuel)) AS dont_premier_mois
+FROM v;
