@@ -77,3 +77,15 @@ Pourquoi : (à compléter avec mes mots avant le chapitre 6)
 - volume (partition 2026-11-02) : 199 997 lignes de commande, chargé en 20,1 s
 - idempotence : les empreintes md5 des 8 tables sont identiques avant et après un second chargement
 - 358 paiements en espèces chargés avec une référence NULL (et non une chaîne vide)
+
+## Chapitre 2.2 : COPY contre INSERT (20 000 lignes de lignes_commande, médiane de 5 mesures, passage à blanc ignoré)
+
+| Méthode | Médiane | Min | Max | Fois plus lent que COPY |
+|---|---|---|---|---|
+| INSERT, autocommit (1 commit par ligne) | 34.70 s | 31.99 s | 35.66 s | x256.6 |
+| INSERT, une seule transaction | 2.10 s | 1.94 s | 2.32 s | x15.5 |
+| COPY (code du chargeur) | 0.14 s | 0.13 s | 0.14 s | x1.0 |
+
+Lecture : 34,7 s → 2,1 s en groupant les 20 000 commits en un seul (≈ 1,6 ms par commit, le temps d'attendre
+le disque) ; 2,1 s → 0,14 s en envoyant les lignes en un seul flux au lieu d'une requête chacune.
+Limites : table sans clés étrangères, PostgreSQL sur la même machine (aucune latence réseau).
