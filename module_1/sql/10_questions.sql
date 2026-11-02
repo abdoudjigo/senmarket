@@ -263,3 +263,63 @@ SELECT
             SELECT client_id, ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande, commande_id) AS rang
             FROM commandes) o
         WHERE rang = 2) t)                                                                              AS obtenu;
+
+-- ===========================================================================
+-- SM-125 : « Quelles commandes n'ont aucun paiement réussi ? Quels paiements ne
+-- correspondent à aucune commande ? »
+-- Anti-jointure : NOT EXISTS, puis la même chose avec LEFT JOIN ... IS NULL.
+-- ===========================================================================
+-- Contrôle préalable : les vraies valeurs du statut (les données font foi).
+SELECT statut_paiement, COUNT(*) AS nb FROM paiements GROUP BY 1 ORDER BY nb DESC;
+
+-- Liste 1 : commandes sans aucun paiement réussi (NOT EXISTS), en séparant deux causes
+SELECT
+    COUNT(*)                                                                         AS commandes_sans_paiement_reussi,
+    COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM paiements q WHERE q.commande_id = c.commande_id)) AS dont_aucun_paiement,
+    COUNT(*) FILTER (WHERE EXISTS     (SELECT 1 FROM paiements q WHERE q.commande_id = c.commande_id)) AS dont_paiement_non_reussi
+FROM commandes c
+WHERE NOT EXISTS (
+    SELECT 1 FROM paiements p
+    WHERE p.commande_id = c.commande_id AND p.statut_paiement = 'réussi'
+);
+
+-- Même liste avec LEFT JOIN ... IS NULL. La condition sur le statut va dans le ON (pas dans le WHERE).
+SELECT COUNT(*) AS commandes_sans_paiement_reussi_left_join
+FROM commandes c
+LEFT JOIN paiements p ON p.commande_id = c.commande_id AND p.statut_paiement = 'réussi'
+WHERE p.paiement_id IS NULL;
+
+-- Les deux écritures donnent-elles exactement les mêmes commandes ? (écart attendu : 0)
+SELECT COUNT(*) AS ecart_entre_les_deux_ecritures FROM (
+    (SELECT c.commande_id FROM commandes c
+     WHERE NOT EXISTS (SELECT 1 FROM paiements p WHERE p.commande_id = c.commande_id AND p.statut_paiement = 'réussi')
+     EXCEPT
+     SELECT c.commande_id FROM commandes c
+     LEFT JOIN paiements p ON p.commande_id = c.commande_id AND p.statut_paiement = 'réussi'
+     WHERE p.paiement_id IS NULL)
+    UNION ALL
+    (SELECT c.commande_id FROM commandes c
+     LEFT JOIN paiements p ON p.commande_id = c.commande_id AND p.statut_paiement = 'réussi'
+     WHERE p.paiement_id IS NULL
+     EXCEPT
+     SELECT c.commande_id FROM commandes c
+     WHERE NOT EXISTS (SELECT 1 FROM paiements p WHERE p.commande_id = c.commande_id AND p.statut_paiement = 'réussi'))
+) t;
+
+-- Liste 2 : paiements qui ne correspondent à aucune commande.
+-- Attendu : 0, car la clé étrangère paiements.commande_id l'interdit.
+SELECT COUNT(*) AS paiements_sans_commande
+FROM paiements p
+WHERE NOT EXISTS (SELECT 1 FROM commandes c WHERE c.commande_id = p.commande_id);
+
+-- Croisement avec l'écart relevé au pré-vol : commandes dont le total des paiements
+-- (tous statuts) diffère du total des lignes.
+WITH l AS (SELECT commande_id, SUM(montant_xof) AS m FROM lignes_commande GROUP BY commande_id),
+     p AS (SELECT commande_id, SUM(montant_xof) AS m FROM paiements GROUP BY commande_id)
+SELECT
+    COUNT(*)                                                    AS commandes_avec_paiement,
+    COUNT(*) FILTER (WHERE l.m <> p.m)                          AS ecart_de_montant,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE l.m <> p.m) / COUNT(*), 2) AS pct_ecart,
+    COUNT(*) FILTER (WHERE l.m <> p.m AND NOT EXISTS (
+        SELECT 1 FROM paiements q WHERE q.commande_id = l.commande_id AND q.statut_paiement = 'réussi')) AS dont_sans_paiement_reussi
+FROM l JOIN p ON p.commande_id = l.commande_id;

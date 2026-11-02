@@ -144,3 +144,10 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 - Délai médian : 64 jours ; moyen : 105,6 jours (tiré vers le haut par quelques clients très lents, max 628) ; 9 clients à 0 jour (même jour).
 - Invariant : clients retenus (1 182) = clients ayant au moins 2 commandes (1 182).
 - Limite : les clients récents n'ont pas eu le temps de recommander, donc le délai réel est probablement un peu plus long.
+
+## Chapitre 2.3 : SM-125, commandes sans paiement réussi (partition principale)
+- Statuts : réussi 3 541, échoué 290, en_attente 171 (total 4 002 = un paiement par commande avec paiement).
+- 543 commandes sans paiement réussi (13,3 % des 4 084) : 82 sans aucun paiement (≈ 2 %) + 461 avec un paiement échoué ou en attente.
+- NOT EXISTS et LEFT JOIN ... IS NULL : mêmes 543 commandes (écart 0). Piège : la condition sur le statut va dans le ON du LEFT JOIN, pas dans le WHERE.
+- Paiements sans commande : 0, impossible par la clé étrangère (ils étaient mis en quarantaine au module 0). Les deux listes sont donc disjointes par construction.
+- Écart de montant paiement/lignes : 41 commandes sur 4 002 (1,02 %), dont 5 sans paiement réussi.
