@@ -223,3 +223,43 @@ SELECT
     ROUND(AVG(montant_panier) / (SELECT AVG(montant_xof) FROM lignes_commande)
           - AVG(nb_lignes), 6)                                                          AS ecart_ratio
 FROM panier;
+
+-- ===========================================================================
+-- SM-124 : « Combien de temps un client met-il à repasser une deuxième commande ? »
+-- ROW_NUMBER numérote les commandes de chaque client (date, puis commande_id pour départager).
+-- Délai = date de la 2e commande - date de la 1re (en jours).
+-- Seuls les clients ayant AU MOINS 2 commandes comptent : les autres n'ont pas de 2e commande
+-- (ce n'est pas un délai de 0 jour).
+-- ===========================================================================
+WITH ordonnees AS (
+    SELECT client_id, date_commande,
+           ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande, commande_id) AS rang
+    FROM commandes
+),
+delais AS (
+    SELECT client_id,
+           MAX(date_commande) FILTER (WHERE rang = 2) - MAX(date_commande) FILTER (WHERE rang = 1) AS jours
+    FROM ordonnees
+    WHERE rang <= 2
+    GROUP BY client_id
+    HAVING COUNT(*) = 2
+)
+SELECT
+    COUNT(*)                                                           AS nb_clients_avec_2_commandes,
+    (SELECT COUNT(DISTINCT client_id) FROM commandes)                  AS nb_clients_acheteurs,
+    ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY jours))::numeric, 1) AS delai_median_jours,
+    ROUND(AVG(jours), 1)                                               AS delai_moyen_jours,
+    MIN(jours)                                                         AS delai_min,
+    MAX(jours)                                                         AS delai_max,
+    COUNT(*) FILTER (WHERE jours = 0)                                  AS meme_jour
+FROM delais;
+
+-- Invariant : chaque client n'apparaît qu'une fois ; le nombre de clients retenus égale
+-- le nombre de clients ayant au moins 2 commandes (écart attendu : 0).
+SELECT
+    (SELECT COUNT(*) FROM (SELECT client_id FROM commandes GROUP BY client_id HAVING COUNT(*) >= 2) t) AS attendu,
+    (SELECT COUNT(*) FROM (
+        SELECT client_id FROM (
+            SELECT client_id, ROW_NUMBER() OVER (PARTITION BY client_id ORDER BY date_commande, commande_id) AS rang
+            FROM commandes) o
+        WHERE rang = 2) t)                                                                              AS obtenu;

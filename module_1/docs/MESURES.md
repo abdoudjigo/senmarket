@@ -138,3 +138,9 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 - Invariants : somme des paniers = CA total (écart 0) ; panier moyen / moyenne par ligne = lignes par commande (écart 0).
 - Pourquoi panier moyen ≠ moyenne par ligne : une commande a en moyenne 2,45 lignes ; le rapport des deux calculs est exactement ce nombre.
 - Moyenne (39 915) bien au-dessus de la médiane (18 361) : quelques gros paniers tirent la moyenne ; la médiane est plus représentative du client typique.
+
+## Chapitre 2.3 : SM-124, délai avant la 2e commande (partition principale)
+- 2 341 clients acheteurs, dont 1 182 (50,5 %) ont au moins 2 commandes : seuls eux comptent (les autres n'ont pas de 2e commande).
+- Délai médian : 64 jours ; moyen : 105,6 jours (tiré vers le haut par quelques clients très lents, max 628) ; 9 clients à 0 jour (même jour).
+- Invariant : clients retenus (1 182) = clients ayant au moins 2 commandes (1 182).
+- Limite : les clients récents n'ont pas eu le temps de recommander, donc le délai réel est probablement un peu plus long.
