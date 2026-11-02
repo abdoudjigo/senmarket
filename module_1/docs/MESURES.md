@@ -151,3 +151,9 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 - NOT EXISTS et LEFT JOIN ... IS NULL : mêmes 543 commandes (écart 0). Piège : la condition sur le statut va dans le ON du LEFT JOIN, pas dans le WHERE.
 - Paiements sans commande : 0, impossible par la clé étrangère (ils étaient mis en quarantaine au module 0). Les deux listes sont donc disjointes par construction.
 - Écart de montant paiement/lignes : 41 commandes sur 4 002 (1,02 %), dont 5 sans paiement réussi.
+
+## Chapitre 2.3 : SM-126, concentration du CA par client (partition principale)
+- Population : 2 341 clients ayant au moins une commande. 863 clients (36,9 %) font 80 % du CA (cumul atteint : 80,0 %).
+- Invariants : dernier cumul = 100,0 % ; somme des CA par client = CA total (écart 0).
+- Cadre de fenêtre ROWS (et non RANGE) avec client_id en départage : un cumul par client, même à CA égal.
+- Lecture : concentration moins forte que le 20/80 classique.

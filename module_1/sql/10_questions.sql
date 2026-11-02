@@ -323,3 +323,48 @@ SELECT
     COUNT(*) FILTER (WHERE l.m <> p.m AND NOT EXISTS (
         SELECT 1 FROM paiements q WHERE q.commande_id = l.commande_id AND q.statut_paiement = 'réussi')) AS dont_sans_paiement_reussi
 FROM l JOIN p ON p.commande_id = l.commande_id;
+
+-- ===========================================================================
+-- SM-126 : « Quel petit groupe de clients fait 80 % de notre chiffre d'affaires ? »
+-- Population : les clients ayant au moins une commande (un client sans commande n'a pas de CA).
+-- Somme cumulée en fenêtre : ROWS (une ligne à la fois) et pas le cadre par défaut RANGE,
+-- qui donnerait le même cumul à deux clients de même CA ; client_id sert de départage.
+-- Entiers : ca_cumule * 10 >= ca_total * 8 évite toute comparaison décimale.
+-- ===========================================================================
+WITH ca_client AS (
+    SELECT c.client_id, SUM(l.montant_xof) AS ca
+    FROM lignes_commande l
+    JOIN commandes c ON c.commande_id = l.commande_id
+    GROUP BY c.client_id
+),
+cumul AS (
+    SELECT client_id, ca,
+           ROW_NUMBER() OVER (ORDER BY ca DESC, client_id)                     AS rang,
+           SUM(ca) OVER (ORDER BY ca DESC, client_id
+                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)     AS ca_cumule,
+           SUM(ca) OVER ()                                                     AS ca_total,
+           COUNT(*) OVER ()                                                    AS nb_clients
+    FROM ca_client
+)
+SELECT
+    MIN(rang)                                         AS clients_pour_80_pct_du_ca,
+    MAX(nb_clients)                                   AS clients_acheteurs,
+    ROUND(100.0 * MIN(rang) / MAX(nb_clients), 1)     AS part_des_clients_pct,
+    ROUND(100.0 * MIN(ca_cumule) / MAX(ca_total), 1)  AS ca_atteint_pct
+FROM cumul
+WHERE ca_cumule * 10 >= ca_total * 8;
+
+-- Invariant : le dernier cumul vaut 100 % du CA total, et la somme des CA par client égale le CA total.
+WITH ca_client AS (
+    SELECT c.client_id, SUM(l.montant_xof) AS ca
+    FROM lignes_commande l JOIN commandes c ON c.commande_id = l.commande_id
+    GROUP BY c.client_id
+),
+cumul AS (
+    SELECT ca, SUM(ca) OVER (ORDER BY ca DESC, client_id
+                             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ca_cumule
+    FROM ca_client
+)
+SELECT ROUND(100.0 * MAX(ca_cumule) / (SELECT SUM(montant_xof) FROM lignes_commande), 1) AS dernier_cumul_pct,
+       (SELECT SUM(montant_xof) FROM lignes_commande) - SUM(ca)                           AS ecart_ca
+FROM cumul;
