@@ -12,3 +12,5 @@
 - modèle PostgreSQL : le contrat du module 0 ne correspond pas aux données (statuts avec accents, 5 types d'événements) : les données font foi
 - question 1 : une FK garantit qu'une ligne a une commande, pas qu'une commande a des lignes ; la transaction du chapitre 2.4 garantit l'ensemble
 - question 2 : les lignes disent ce qui a été commandé, le paiement ce qui a été encaissé ; deux faits différents, pas une redondance
+- chargement : TRUNCATE + COPY dans une transaction ; verrou exclusif pendant le chargement ; cree_le est recréé à chaque chargement (l'empreinte ignore les colonnes d'audit)
+- chargement : vérification des comptes et des sommes AVANT le commit ; NULL vs chaîne vide pour les références ; fuseau UTC forcé

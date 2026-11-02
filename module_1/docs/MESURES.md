@@ -71,3 +71,9 @@ volumes. Redis perd tout dans les deux cas : le compose désactive sa sauvegarde
 
 Où doit vivre le stock ? Dans PostgreSQL.
 Pourquoi : (à compléter avec mes mots avant le chapitre 6)
+
+## Chapitre 2.2 : chargement dans PostgreSQL
+- principal (partition 2026-10-29) : 9 995 lignes de commande, chargé en 1,1 s
+- volume (partition 2026-11-02) : 199 997 lignes de commande, chargé en 20,1 s
+- idempotence : les empreintes md5 des 8 tables sont identiques avant et après un second chargement
+- 358 paiements en espèces chargés avec une référence NULL (et non une chaîne vide)
