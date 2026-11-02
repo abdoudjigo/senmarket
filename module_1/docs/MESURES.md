@@ -89,3 +89,23 @@ Pourquoi : (à compléter avec mes mots avant le chapitre 6)
 Lecture : 34,7 s → 2,1 s en groupant les 20 000 commits en un seul (≈ 1,6 ms par commit, le temps d'attendre
 le disque) ; 2,1 s → 0,14 s en envoyant les lignes en un seul flux au lieu d'une requête chacune.
 Limites : table sans clés étrangères, PostgreSQL sur la même machine (aucune latence réseau).
+
+## Chapitre 2.2 : « vider puis recharger » ou « insérer avec gestion de conflit » ?
+
+**Pendant que l'application lit :** « vider puis recharger » est le moins confortable, car le `TRUNCATE`
+prend un verrou exclusif : dans mon expérience à deux terminaux, un simple `SELECT` est resté bloqué puis annulé
+(`canceling statement due to lock timeout`), alors qu'avec un `DELETE` le lecteur a répondu aussitôt avec les
+anciennes données (999 avis) grâce au MVCC. Mon chargeur verrouille les huit tables pendant tout le chargement,
+soit 1,1 s sur `principal` et 20,1 s sur `volume`, ce qui reste acceptable la nuit, alors que « insérer avec gestion de
+conflit » ne bloque personne (il ne verrouille que les lignes qu'il modifie), mais il laisse en place une ligne
+disparue de la source et demande donc un nettoyage à part. En contrepartie, « vider puis recharger » est dans une seule
+transaction : les lecteurs voient soit l'ancien état complet, soit le nouvel état complet, jamais un état à moitié chargé.
+
+**À 100 millions de lignes (×500) :** « vider puis recharger » deviendrait le moins bon, car si la durée suit à
+peu près linéairement, mes 20,1 s deviendraient environ 10 000 s (≈ 2 h 45) de verrou exclusif, pendant lesquelles
+l'application serait figée. L'insertion avec conflit reste utilisable, parce qu'elle ne bloque pas les lecteurs, mais
+elle coûte cher par ligne : une recherche dans l'index, une nouvelle version de ligne à chaque mise à jour, et
+beaucoup d'anciennes versions que PostgreSQL doit nettoyer ensuite (VACUUM). À cette échelle, on ne rechargerait de
+toute façon plus tout : on chargerait seulement ce qui a changé (chargement incrémental, module 3).
+
+_Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un PostgreSQL local sur ma machine._
