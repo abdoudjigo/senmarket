@@ -115,3 +115,11 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 - Invariant 1 : somme des régions = CA total = 163 011 763 XOF (écart 0).
 - Invariant 2 : 9 995 lignes avant et après les jointures (rien multiplié, rien perdu).
 - Limite : 1 client « Inconnue » est rattaché à la région Dakar (héritage du module 0), donc Dakar est légèrement surestimée.
+
+## Chapitre 2.3 : SM-121, top 3 produits par catégorie (partition principale)
+- Définition : « le plus vendu » = quantité totale vendue. 7 catégories, 20 lignes ; Hygiène n'en a que 2 (2 produits au catalogue).
+- Invariant : aucune catégorie n'a plus de 3 produits (0 ligne renvoyée par le contrôle).
+- Égalités : aucune sur la quantité vendue (principal ni volume). Trouvées sur le nombre de commandes contenant le produit :
+  Boissons (Thé = Café = 220) et Fournitures (Cahier = Stylo = 107). Démonstration sur cette mesure, pas sur la définition de SM-121.
+- Boissons : row_number 1,2,3,4 ; rank 1,1,3,4 (trou) ; dense_rank 1,1,2,3.
+  `rank <= 1` renvoie 2 produits, `dense_rank <= 2` en renvoie 3 : seul `row_number` + départage fixe garantit « au plus N ».
