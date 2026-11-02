@@ -66,3 +66,8 @@ PostgreSQL et MongoDB gardent leurs données après `down` puis `up`, parce qu'e
 dans des volumes que `down` conserve, mais les perdent après `down -v`, qui supprime les
 volumes. Redis perd tout dans les deux cas : le compose désactive sa sauvegarde
 (`--save ''` et `--appendonly no`), donc il ne garde ses données qu'en mémoire.
+
+## Chapitre 1 : réponse initiale (avant le chapitre 2)
+
+Où doit vivre le stock ? Dans PostgreSQL.
+Pourquoi : (à compléter avec mes mots avant le chapitre 6)
