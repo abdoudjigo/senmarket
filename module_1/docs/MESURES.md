@@ -109,3 +109,9 @@ beaucoup d'anciennes versions que PostgreSQL doit nettoyer ensuite (VACUUM). À 
 toute façon plus tout : on chargerait seulement ce qui a changé (chargement incrémental, module 3).
 
 _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un PostgreSQL local sur ma machine._
+
+## Chapitre 2.3 : SM-120, CA par région (partition principale)
+- 14 régions ; Dakar 65 064 469 XOF (39,9 %), Thiès 31 499 993 (19,3 %), Kédougou la plus faible (0,3 %).
+- Invariant 1 : somme des régions = CA total = 163 011 763 XOF (écart 0).
+- Invariant 2 : 9 995 lignes avant et après les jointures (rien multiplié, rien perdu).
+- Limite : 1 client « Inconnue » est rattaché à la région Dakar (héritage du module 0), donc Dakar est légèrement surestimée.
