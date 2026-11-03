@@ -368,3 +368,39 @@ cumul AS (
 SELECT ROUND(100.0 * MAX(ca_cumule) / (SELECT SUM(montant_xof) FROM lignes_commande), 1) AS dernier_cumul_pct,
        (SELECT SUM(montant_xof) FROM lignes_commande) - SUM(ca)                           AS ecart_ca
 FROM cumul;
+
+-- ===========================================================================
+-- SM-127 : « Combien de sessions finissent avec un article au panier mais sans début de paiement ? »
+-- Types d'événements réels : page_vue, vue_produit, recherche, ajout_panier, debut_paiement.
+-- Règle : on compte par session_id seulement. Dans ces données, client_id est attribué événement par
+-- événement (plusieurs client_id dans une même session) : une session n'est donc pas rattachée à un client.
+-- Une session est « toute anonyme » si aucun de ses événements n'a de client_id. L'ordre des événements
+-- n'est pas pris en compte (présence de ajout_panier, absence de debut_paiement).
+-- GROUP BY session_id : une session n'apparaît qu'une seule fois, même avec plusieurs ajouts au panier.
+-- ===========================================================================
+WITH s AS (
+    SELECT session_id,
+           COUNT(*) FILTER (WHERE type_evenement = 'ajout_panier')    AS nb_panier,
+           COUNT(*) FILTER (WHERE type_evenement = 'debut_paiement')  AS nb_paiement,
+           COUNT(*) FILTER (WHERE client_id IS NOT NULL)              AS nb_evt_identifies
+    FROM navigation
+    GROUP BY session_id
+)
+SELECT
+    COUNT(*)                                                                         AS sessions_total,
+    COUNT(*) FILTER (WHERE nb_panier > 0)                                            AS sessions_avec_panier,
+    COUNT(*) FILTER (WHERE nb_panier > 0 AND nb_paiement = 0)                        AS panier_sans_paiement,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE nb_panier > 0 AND nb_paiement = 0)
+          / NULLIF(COUNT(*) FILTER (WHERE nb_panier > 0), 0), 1)                     AS pct_abandon,
+    COUNT(*) FILTER (WHERE nb_panier > 0 AND nb_paiement = 0 AND nb_evt_identifies = 0) AS dont_toute_anonyme,
+    COUNT(*) FILTER (WHERE nb_paiement > 0 AND nb_panier = 0)                        AS paiement_sans_panier
+FROM s;
+
+-- Invariant : la version anti-jointure (NOT EXISTS) donne le même nombre de sessions.
+-- Sans DISTINCT on compterait une ligne par événement ajout_panier : c'est le piège « une session une seule fois ».
+SELECT COUNT(*)                     AS lignes_sans_distinct,
+       COUNT(DISTINCT n.session_id) AS sessions_distinctes
+FROM navigation n
+WHERE n.type_evenement = 'ajout_panier'
+  AND NOT EXISTS (SELECT 1 FROM navigation q
+                  WHERE q.session_id = n.session_id AND q.type_evenement = 'debut_paiement');
