@@ -166,3 +166,41 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 | Naïve, pause de 10 ms entre lecture et écriture | 200 | 200 | 0 | 0 | 0 | 7.03 s |
 
 Lors d'une double vente, le stock final observé est 0 : l'erreur n'est visible que dans le nombre de commandes.
+
+## Chapitre 2.4 : plantage entre la commande et le paiement (Téléphone, PRO0025), version naïve
+
+| Variante | Essais avec plantage | Commandes sans paiement | Essais où le stock est débité sans paiement | Temps total |
+|---|---|---|---|---|
+| Naïve (autocommit, sans transaction) | 200 | 200 | 200 | 0.98 s |
+
+## Chapitre 2.4 : les trois remèdes, sur Téléphone (PRO0025)
+
+### Double vente (deux acheteurs, stock 1)
+
+| Variante | Essais | Doubles ventes | Commandes sans paiement | Refus « plus de stock » | Erreurs techniques | Temps total |
+|---|---|---|---|---|---|---|
+| Atomique (UPDATE conditionnel), sans pause | 200 | 0 | 0 | 200 | 0 | 1.59 s |
+| Atomique (UPDATE conditionnel), pause de 10 ms | 200 | 0 | 0 | 200 | 0 | 4.15 s |
+| Verrou (SELECT FOR UPDATE), sans pause | 200 | 0 | 0 | 200 | 0 | 1.39 s |
+| Verrou (SELECT FOR UPDATE), pause de 10 ms | 200 | 0 | 0 | 200 | 0 | 4.21 s |
+| SERIALIZABLE + nouvelle tentative, sans pause | 200 | 0 | 0 | 200 | 0 | 2.50 s |
+| SERIALIZABLE + nouvelle tentative, pause de 10 ms | 200 | 0 | 0 | 200 | 0 | 5.09 s |
+
+### Plantage entre la commande et le paiement
+
+| Variante | Essais avec plantage | Commandes sans paiement | Essais où le stock est débité sans paiement | Temps total |
+|---|---|---|---|---|
+| Atomique (UPDATE conditionnel) | 200 | 0 | 0 | 0.54 s |
+| Verrou (SELECT FOR UPDATE) | 200 | 0 | 0 | 0.49 s |
+| SERIALIZABLE + nouvelle tentative | 200 | 0 | 0 | 0.57 s |
+
+### Débit (8 acheteurs x 100 commandes sur le même produit, stock 10 000)
+
+| Variante | Commandes réussies | Erreurs | Temps | Débit (commandes/s) | Stock et commandes cohérents |
+|---|---|---|---|---|---|
+| Naïve (pour comparaison) | 800 | 0 | 0.82 s | 980 | NON |
+| Atomique (UPDATE conditionnel) | 800 | 0 | 1.88 s | 425 | oui |
+| Verrou (SELECT FOR UPDATE) | 800 | 0 | 1.97 s | 406 | oui |
+| SERIALIZABLE + nouvelle tentative | 800 | 0 | 2.46 s | 325 | oui |
+
+Lecture : la version naïve est la plus rapide parce qu'elle ne protège rien, et son stock final est faux. Les trois remèdes sont corrects ; l'atomique et le verrou sont proches (une seule mesure, à ne pas sur-interpréter), SERIALIZABLE est le plus lent car il rejoue les commandes en conflit.
