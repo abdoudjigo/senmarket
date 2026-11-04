@@ -204,3 +204,11 @@ Lors d'une double vente, le stock final observé est 0 : l'erreur n'est visible 
 | SERIALIZABLE + nouvelle tentative | 800 | 0 | 2.46 s | 325 | oui |
 
 Lecture : la version naïve est la plus rapide parce qu'elle ne protège rien, et son stock final est faux. Les trois remèdes sont corrects ; l'atomique et le verrou sont proches (une seule mesure, à ne pas sur-interpréter), SERIALIZABLE est le plus lent car il rejoue les commandes en conflit.
+
+## Chapitre 2.4 : questions
+
+**1. En READ COMMITTED, que voit une transaction qui relit une ligne que l'autre vient de valider ?**
+Elle voit la nouvelle valeur : la session A a lu stock = 5, la session B a validé 4, et la relecture de A, dans la même transaction, a donné 4. En REPEATABLE READ, A garde sa photo du début (5 avant et après la modification de B), mais son UPDATE est refusé avec « could not serialize access due to concurrent update » (SQLSTATE 40001), l'erreur que mon remède SERIALIZABLE attrape puis rejoue.
+
+**2. Quelle différence entre une commande refusée « plus de stock » et une panne technique ?**
+Un refus « plus de stock » est une réponse normale du métier : mon code lève StockInsuffisant, le client lit « article indisponible » et réessayer ne sert à rien. Une panne technique est toute autre exception (connexion perdue, trop de conflits) : le client lit « réessayez dans un instant » et réessayer a un sens. Mes tableaux les comptent séparément : 200 refus et 0 erreur technique par variante.
