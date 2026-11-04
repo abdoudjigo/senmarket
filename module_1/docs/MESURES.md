@@ -157,3 +157,12 @@ _Limite : extrapolation linéaire, indicative ; mes mesures viennent d'un Postgr
 - Invariants : dernier cumul = 100,0 % ; somme des CA par client = CA total (écart 0).
 - Cadre de fenêtre ROWS (et non RANGE) avec client_id en départage : un cumul par client, même à CA égal.
 - Lecture : concentration moins forte que le 20/80 classique.
+
+## Chapitre 2.4 : double vente sur Téléphone (PRO0025), stock 1, deux acheteurs en parallèle
+
+| Variante | Essais | Doubles ventes | Commandes sans paiement | Refus « plus de stock » | Erreurs techniques | Temps total |
+|---|---|---|---|---|---|---|
+| Naïve, sans pause | 200 | 194 | 0 | 6 | 0 | 4.87 s |
+| Naïve, pause de 10 ms entre lecture et écriture | 200 | 200 | 0 | 0 | 0 | 7.03 s |
+
+Lors d'une double vente, le stock final observé est 0 : l'erreur n'est visible que dans le nombre de commandes.
