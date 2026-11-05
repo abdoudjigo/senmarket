@@ -1,0 +1,7 @@
+pandas
+pyarrow
+numpy
+psycopg[binary]
+pymongo
+redis
+python-dotenv

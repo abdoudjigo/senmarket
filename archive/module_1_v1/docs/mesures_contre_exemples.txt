@@ -1,0 +1,30 @@
+=== Contre-exemple 1 : colonne à peu de valeurs (statut) ===
+répartition : [('livrée', 58183), ('expédiée', 9714), ('en_preparation', 8089), ('annulée', 4890)]
+statut frequent            médiane=      9.15 ms (5 mesures) estimées=57967 réelles=58183
+   plan : Seq Scan(commandes)
+
+=== Contre-exemple 2 : fonction sur la colonne indexée (lower) ===
+nom_client = (index OK)    médiane=      0.02 ms (5 mesures) estimées=1 réelles=1
+   plan : Index Scan(idx_tmp_nom)
+lower(nom_client) =        médiane=     12.84 ms (5 mesures) estimées=250 réelles=1
+   plan : Seq Scan(clients)
+
+=== Contre-exemple 3 : LIKE avec joker au début ===
+LIKE 'debut%' (index)      médiane=      2.11 ms (5 mesures) estimées=12603 réelles=12599
+   plan : Bitmap Heap Scan(clients) > Bitmap Index Scan(idx_tmp_ville)
+LIKE '%fin' (joker)        médiane=      8.59 ms (5 mesures) estimées=12680 réelles=12599
+   plan : Seq Scan(clients)
+
+=== Contre-exemple 4 : conversion de date sur la colonne ===
+plage (index OK)           médiane=      0.54 ms (5 mesures) estimées=979 réelles=1172
+   plan : Bitmap Heap Scan(navigation) > Bitmap Index Scan(idx_tmp_nav_date)
+date_evenement::date =     médiane=     21.98 ms (5 mesures) estimées=2000 réelles=1172
+   plan : Gather > Seq Scan(navigation)
+
+=== Index composite : les deux ordres ===
+composite (client_id, date_commande) médiane=      0.04 ms (5 mesures) estimées=7 réelles=3
+   plan : Bitmap Heap Scan(commandes) > Bitmap Index Scan(idx_tmp_cmd_a)
+composite (date_commande, client_id) médiane=      0.89 ms (5 mesures) estimées=7 réelles=3
+   plan : Index Scan(idx_tmp_cmd_b)
+
+Index temporaires supprimés.
