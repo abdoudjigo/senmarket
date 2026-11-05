@@ -29,3 +29,6 @@ logs/
 .vscode/
 .idea/
 .DS_Store
+
+.zip
+.sh
