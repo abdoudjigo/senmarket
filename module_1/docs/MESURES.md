@@ -228,3 +228,9 @@ Temps de la requête la plus lente de chaque question, deuxième passe (la premi
 | SM-125 (2e requête) | 61 552 ms |
 | SM-126 | 395 ms |
 | SM-127 | 418 ms |
+
+## Index sur lignes_commande(produit_id), schéma volume (199 997 lignes)
+Requête : SELECT * FROM lignes_commande WHERE produit_id = 'PRO0040' (1 622 lignes)
+- Sans index : Seq Scan, 198 375 lignes lues puis jetées, 32,2 ms
+- Avec index idx_lignes_produit : Bitmap Heap Scan, 1 104 blocs lus, 1,9 ms
+- Gain : environ x17 (2e exécution de chaque, cache chaud)
