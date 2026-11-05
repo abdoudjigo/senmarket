@@ -212,3 +212,19 @@ Elle voit la nouvelle valeur : la session A a lu stock = 5, la session B a valid
 
 **2. Quelle différence entre une commande refusée « plus de stock » et une panne technique ?**
 Un refus « plus de stock » est une réponse normale du métier : mon code lève StockInsuffisant, le client lit « article indisponible » et réessayer ne sert à rien. Une panne technique est toute autre exception (connexion perdue, trop de conflits) : le client lit « réessayez dans un instant » et réessayer a un sens. Mes tableaux les comptent séparément : 200 refus et 0 erreur technique par variante.
+
+## Chapitre 2.5 : point de départ sur la partition volume (avant tout index)
+
+Temps de la requête la plus lente de chaque question, deuxième passe (la première chauffe le cache). Un classement pour choisir, pas la mesure finale (médiane de 5 à venir).
+
+| Question | Temps |
+|---|---|
+| SM-120 | 1 071 ms |
+| SM-121 | 59 ms |
+| SM-121 variante égalités | 1 054 ms |
+| SM-122 | 245 ms |
+| SM-123 | 178 ms |
+| SM-124 | 629 ms |
+| SM-125 (2e requête) | 61 552 ms |
+| SM-126 | 395 ms |
+| SM-127 | 418 ms |

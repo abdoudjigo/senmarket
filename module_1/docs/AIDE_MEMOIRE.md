@@ -1,4 +1,4 @@
-# Aide-mémoire Module 1 (à copier-coller dans le terminal)
+# Aide-mémoire Module 1 
 
 ```bash
 # 1. Toujours se placer dans module_1 (l'alias ne marche que d'ici)
