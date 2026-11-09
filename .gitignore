@@ -32,3 +32,5 @@ logs/
 
 .zip
 .sh
+module_1/*.pdf
+*.egg-info/

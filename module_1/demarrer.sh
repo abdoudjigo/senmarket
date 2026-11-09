@@ -21,3 +21,7 @@ done
 python -m senmarket_bases.charger_postgres --run-date 2026-10-29 --schema principal | tail -2
 python -m senmarket_bases.charger_postgres --run-date 2026-11-02 --schema volume | tail -2
 python -m senmarket_bases.charger_mongo 2026-10-29 | head -1
+
+#cd ~/Documents/"Orange Digital center"/Parcours/senmarket/module_1
+#docker compose --env-file .env -f infra/docker-compose.yml down -v
+#./demarrer.sh
